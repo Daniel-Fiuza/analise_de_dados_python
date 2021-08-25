@@ -1,0 +1,1 @@
+Script que realiza análise de dados a partir de arquivos csv utilizando os módulos pandas e numpy em python.

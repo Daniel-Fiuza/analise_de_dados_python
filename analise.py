@@ -4,7 +4,8 @@ import os
 import json
 from pathlib import Path
 
-dir_of_files = "LOGScaminhao"
+# dir_of_files = "LOGScaminhao"
+dir_of_files = "/home/administrador/Documentos/LOGS_ADC"
 
 def convert_to_csv(dir_of_files):
     count_success = 0; count_files = 0
@@ -86,6 +87,6 @@ def convert_csv_to_json():
     print(f"Arquivo {JSONfile} criado com sucesso!")
 
 if __name__ == "__main__": 
-    # convert_to_csv(dir_of_files)
+    convert_to_csv(dir_of_files)
     # analise_datas()
-    convert_csv_to_json()
+    # convert_csv_to_json()

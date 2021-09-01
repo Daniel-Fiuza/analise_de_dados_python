@@ -5,28 +5,35 @@ import json
 from pathlib import Path
 
 # dir_of_files = "LOGScaminhao"
-dir_of_files = "/home/administrador/Documentos/LOGS_ADC"
+dir_of_files = "/home/administrador/Documentos/LOGS_01_09_21/LOGS_caminhao_01_09_21"
 
 def convert_to_csv(dir_of_files):
     count_success = 0; count_files = 0
     pathList = Path(dir_of_files).glob('*.txt')
-    CSVfile = f"dados\{dir_of_files}.csv"
+    # CSVfile = f"dados\{dir_of_files}.csv"
+    CSVfile = f"dados/{dir_of_files.split('/')[-1]}.csv"
     if os.path.exists(CSVfile):
             os.remove(CSVfile) 
 
     for file in pathList:   
         with open(CSVfile, mode='a') as csv_file:
 
-            with open(f'{dir_of_files}\{file.name}', 'r', encoding='utf-8',
+            # with open(f'{dir_of_files}\{file.name}', 'r', encoding='utf-8',
+            with open(f'{dir_of_files}/{file.name}', 'r', encoding='utf-8',
                     errors='ignore') as f:
                 count_files += 1
                 try:
                     msg = f.read()
-                    #remove caracteres nulos
                     msg = msg.rstrip('\x00')
-                    print(f"filename: {file.name}, msg: {msg}")
-                    csv_file.write(msg+'\n')
-                    count_success += 1
+                    lat = msg.split(',')[0]
+                    try:
+                        lat = float(lat)
+                    #remove caracteres nulos
+                        print(f"filename: {file.name}, msg: {msg}")
+                        csv_file.write(msg+'\n')
+                        count_success += 1
+                    except:
+                        continue
                     # if count_success == 10:
                     #     break
                 except:
@@ -37,6 +44,40 @@ def convert_to_csv(dir_of_files):
             \nArquivos que falharam: {count_files - count_success} \
             \nPercentual de sucesso: {round((count_success/count_files)*100, 2)}%")
 
+
+# Obtem os logs do diretorio, organiza pelo timestamp (constituído no nome de cada log) e gera o arquivo csv
+def sort_files(dir_of_files):
+    count_success = 0; count_files = 0
+    pathList = Path(dir_of_files).glob('*.txt')
+    CSVfile = f"dados/{dir_of_files.split('/')[-1]}.csv"
+    if os.path.exists(CSVfile):
+            os.remove(CSVfile) 
+
+    for file in pathList:
+
+        with open(CSVfile, mode='a') as csv_file:
+            with open(f'{dir_of_files}/{file.name}', 'r', encoding='utf-8',
+                        errors='ignore') as f:
+                count_files += 1
+                try:
+                    datetime_list = file.name[:-4].split("_")
+                    datetime_str = f"{datetime_list[0].zfill(2)}/{datetime_list[1].zfill(2)}/{datetime_list[2].zfill(2)} {datetime_list[3].zfill(2)}:{datetime_list[4].zfill(2)}:{datetime_list[5].zfill(2)}"
+                    msg = f.read()
+                    #remove caracteres nulos
+                    msg = msg.rstrip('\x00')
+                    print(f"filename: {file.name}, msg: {msg}")
+                    if msg != "":
+                        csv_file.write(msg+','+datetime_str+'\n')
+                        count_success += 1
+                    # if count_success == 10:
+                    #     break
+                except:
+                    continue
+
+    print(f"Total de arquivos: {count_files} \
+            \nArquivos lidos com sucesso: {count_success} \
+            \nArquivos que falharam: {count_files - count_success} \
+            \nPercentual de sucesso: {round((count_success/count_files)*100, 2)}%")
 
 def analise_datas():
     # file = "logs_caminhao_18_08_21.csv"
@@ -86,7 +127,86 @@ def convert_csv_to_json():
     #     f.write(str(msg_list))
     print(f"Arquivo {JSONfile} criado com sucesso!")
 
+
+def manage_files():
+    filename = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi.txt"
+    count_success = 0
+    count_fail = 0
+    count_lora = 0
+    count_problem = 0
+    count_lines = 0
+    with open(filename, 'r', encoding='utf-8') as f:
+        msg = f.readline()
+        msg = msg.rstrip('\x00')
+        if "Escrito com sucesso no arquivo" in msg:
+            count_success += 1
+        if "Problema ao montar SDCard" in msg:
+            count_fail += 1
+        if "LoraBuffer:" in msg:
+            count_lora += 1
+        if "Erro ao escrever arquivo:" in msg:
+            count_problem += 1
+        count_lines += 1
+        while msg != "":
+            count_lines += 1
+            msg = f.readline()
+            msg = msg.rstrip('\x00')
+            # count += 1
+            if "Escrito com sucesso no arquivo" in msg:
+                count_success += 1
+            if "Problema ao montar SDCard" in msg:
+                count_fail += 1
+            if "LoraBuffer:" in msg:
+                count_lora += 1
+            if "Erro ao escrever arquivo:" in msg:
+                count_problem += 1
+            print(msg)
+    print(f"Salvo {count_success} arquivos com sucesso \
+            \nProblema ao montar SDCard: {count_fail} \
+            \nQuantidade de LoraBuffer: {count_lora} \
+            \nErro ao escrever arquivo: {count_problem} \
+            \nTotal linhas do arquivo: {count_lines}")
+
+def compare_files():
+    pathname = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi"
+    filename = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi.txt"
+    pathList = Path(pathname).glob('*.txt')
+    filesList = []
+    errorFiles = []
+    for files in pathList:
+        filesList.append(files.name)
+
+    with open(filename, 'r', encoding='utf-8') as f:
+        msg = f.readline()
+        msg = msg.rstrip('\x00')
+        #eg: Escrito com sucesso no arquivo: LOGS/24_8_21_15_13_34.txt
+        if "Escrito com sucesso no arquivo" in msg:
+            filename = msg.split('/')[-1]
+            filename = filename.rstrip('\n')
+            if filename in filesList:
+                ...
+            else:
+                errorFiles.append(filename)
+        while msg != "":
+            msg = f.readline()
+            msg = msg.rstrip('\x00')
+            if "Escrito com sucesso no arquivo" in msg:
+                filename = msg.split('/')[-1]
+                filename = filename.rstrip('\n')
+                if filename in filesList:
+                    ...
+                else:
+                    errorFiles.append(filename)
+    print(f"Arquivos que deram erro: \
+            {errorFiles} \
+            \n\nQuantidade de arquivos: {len(errorFiles)}")
+    # with open(f'{dir_of_files}/{file.name}', 'r', encoding='utf-8',
+    #                     errors='ignore') as f:
+
 if __name__ == "__main__": 
-    convert_to_csv(dir_of_files)
+    # sort_files(dir_of_files)
     # analise_datas()
     # convert_csv_to_json()
+    # manage_files()
+    # compare_files()
+    convert_to_csv(dir_of_files)

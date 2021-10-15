@@ -7,7 +7,8 @@ from pathlib import Path
 # dir_of_files = "LOGScaminhao"
 dir_of_files = "/home/administrador/Documentos/LOGS_01_09_21/LOGS_caminhao_01_09_21"
 
-def convert_to_csv(dir_of_files):
+# Obtém arquivos dentro de um diretório e os converte em um arquivo csv 
+def convertFromPathToCsv(dir_of_files):
     count_success = 0; count_files = 0
     pathList = Path(dir_of_files).glob('*.txt')
     # CSVfile = f"dados\{dir_of_files}.csv"
@@ -45,6 +46,39 @@ def convert_to_csv(dir_of_files):
             \nPercentual de sucesso: {round((count_success/count_files)*100, 2)}%")
 
 
+def convertCsvToJson(CSVfile, JSONfile):
+    # CSVfile = "logs_caminhao_filtrado.csv"
+    # JSONfile = f"dados_json/{CSVfile[:-4]}.json"
+    msg_label = ["latitude", "longitude", "status", "angle", "fuel", "weight", "velocity", "imei", "date_created"]
+    msg_dict = {}; msg_list = []; msg_string = ''
+    count_lines = 0
+
+    with open(JSONfile, 'w') as f:
+        f.write('[')
+        with open(CSVfile, 'r') as csv_file:
+            for msg in csv_file.readlines():
+                count_lines += 1
+                msg = msg.rstrip('\n')
+                for i, data in enumerate(msg.split(",")):
+                    msg_dict[msg_label[i]] = data
+                #     if msg_label[i] == "latitude" or \
+                #        msg_label[i] == "longitude" or \
+                #        msg_label[i] == "angle" or \
+                #        msg_label[i] == "velocity":  
+                #         msg_dict[msg_label[i]] = float(data)
+                #     if msg_label[i] == "fuel" or msg_label[i] == "weight":
+                #         msg_dict[msg_label[i]] = int(data)
+                #     if msg_label[i] == "status" or msg_label[i] == "imei" or msg_label[i] == "date_created":
+                #         msg_dict[msg_label[i]] = data
+                    
+                msg_string = json.dumps(msg_dict)
+                f.write(f"{msg_string},") 
+            f.seek(f.tell() - 1, os.SEEK_SET) 
+            f.write(']')
+
+    print(f"Arquivo: {JSONfile} criado com sucesso!")
+
+
 # Obtem os logs do diretorio, organiza pelo timestamp (constituído no nome de cada log) e gera o arquivo csv
 def sort_files(dir_of_files):
     count_success = 0; count_files = 0
@@ -79,6 +113,7 @@ def sort_files(dir_of_files):
             \nArquivos que falharam: {count_files - count_success} \
             \nPercentual de sucesso: {round((count_success/count_files)*100, 2)}%")
 
+
 def analise_datas():
     # file = "logs_caminhao_18_08_21.csv"
     file = "logs_escavadeira_18_08_21.csv"
@@ -94,7 +129,8 @@ def analise_datas():
     # print(df[df["weight"] > 0])
     print(pd.get_option('display.max_rows'))
 
-def convert_csv_to_json():
+
+def convert_csv_to_json_modified():
     CSVfile = "logs_caminhao_filtrado.csv"
     JSONfile = f"{CSVfile[:-4]}.json"
     msg_label = ["latitude", "longitude", "status", "angle", "fuel", "weight", "velocity", "imei", "date_created"]
@@ -127,7 +163,7 @@ def convert_csv_to_json():
     #     f.write(str(msg_list))
     print(f"Arquivo {JSONfile} criado com sucesso!")
 
-
+# Analisa arquivo de mensagens da serial do microcontrolador e o analisa 
 def manage_files():
     filename = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi.txt"
     count_success = 0
@@ -167,6 +203,8 @@ def manage_files():
             \nErro ao escrever arquivo: {count_problem} \
             \nTotal linhas do arquivo: {count_lines}")
 
+
+# Verifica o arquivo de logs do sdcard e o arquivo de leitura da serial do microcontrolador, identificando possíveis arquivos faltantes.
 def compare_files():
     pathname = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi"
     filename = "/home/administrador/Documentos/TESTE_SDCARD/log_abdi.txt"
@@ -203,10 +241,8 @@ def compare_files():
     # with open(f'{dir_of_files}/{file.name}', 'r', encoding='utf-8',
     #                     errors='ignore') as f:
 
+
 if __name__ == "__main__": 
-    # sort_files(dir_of_files)
-    # analise_datas()
-    # convert_csv_to_json()
-    # manage_files()
-    # compare_files()
-    convert_to_csv(dir_of_files)
+    CSVfile = "dados/logs_caminhao_18_08_21.csv"
+    JSONfile = f"dados_json/{CSVfile[6:-4]}.json"
+    convertCsvToJson(CSVfile,JSONfile)

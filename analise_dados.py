@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from pandas.core.dtypes.missing import isnull
 import plotly.express as px
 import plotly.graph_objects as go
 import sys
@@ -8,6 +9,8 @@ import platform as pl
 from geopy.distance import great_circle
 from datetime import datetime
 import time
+
+from traitlets.traitlets import Int
 
 # coords_1 = (-3.944121,-38.71891)
 # coords_2 = (-3.944121,-38.718906)
@@ -96,70 +99,53 @@ class dataObject():
     def addOffset(cls, df_time, minutes):
         return pd.to_datetime(df_time.values) + pd.to_timedelta(minutes, unit='m')
 
-
-
-file_cam = 'logs_caminhao_18_08_21_filtered.csv'
-file_esc = 'logs_escavadeira_18_08_21_filtered.csv'
-file = 'logs_Caminhao_17_08_21_filtered.csv'
-# cam = dataObject(file_cam)
-esc = dataObject(file_esc)
-cam_ant = dataObject(file)
-
-
-esc_gps_fil = esc.df_filtered.loc[:,['latitude','longitude']]
-esc_gps_fil_values = esc_gps_fil.values
-esc.df_filtered['timestamp'] = dataObject.convertToTimestamp(esc.df_filtered['date_created'])
-esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
-fig1 = None
-fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
-cam_fil = cam_ant.df_filtered.loc[cam_ant.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
-fig1 = dataObject.plotDatas(fig1, cam_fil.values, is_line=False, label='caminhao')
-fig1.show()
-sys.exit()
-cam_ant.df_filtered['date_time'] = cam_ant.df_filtered['date_created']
-print(cam_ant.df_filtered['date_time'].values)
-sys.exit()
-cam_ant.df_filtered.plot(y='date_time')
-sys.exit()
-print(esc.df_filtered[great_circle(cam_ant.gps[13],esc_gps_fil).m < 6])
-sys.exit()
-
-for i in range(len(esc_gps_fil_values)):
-    if great_circle(cam_ant.gps[13],esc_gps_fil_values[i]).m < 6:
-        # print(f'coo_cam: {cam_ant.gps[13]}, coo_esc: {esc_gps_fil_values[i]}, idx_esc: {esc.df_filtered.index[i]}, dist: {great_circle(cam_ant.gps[13],esc_gps_fil_values[i]).m}, details:\n {esc.df_filtered.loc[esc.df_filtered.index[i], :]}')
-        print(f'caminhao: {cam_ant.df_filtered.loc[13,["latitude","longitude","status","date_created"]].values}, dist: {round(great_circle(cam_ant.gps[13],esc_gps_fil_values[i]).m,2)}, escavadeira: {esc.df_filtered.loc[esc.df_filtered.index[i],["latitude","longitude","status","date_created"]].values}\n')
-        
-
-sys.exit()
-
-
-fig = go.Figure(go.Scattermapbox(
-    mode = "markers+lines",
-    lon = cam_ant.gps[:,1],
-    lat = cam_ant.gps[:,0],
-    text = 'caminhao',
-    marker = {'size': 10,
-              'color': 'blue'}))
     
-
-fig.add_trace(go.Scattermapbox(
-    mode = "markers+lines",
-    lon = esc.gps[:,1],
-    lat = esc.gps[:,0],
-    text = 'escavadeira',
-    marker = {'size': 10,
-              'color': 'red'}))
-
-fig.update_layout(
-    margin ={'l':0,'t':0,'b':0,'r':0},
-    mapbox = {
-        'center': {'lon': -38.71901, 'lat':  -3.94467},
-        'style': "stamen-terrain",
-        'center': {'lon': -38.71901, 'lat': -3.94467},
-        'zoom': 15})
-
-fig.show()
+    """
+        Cria um intervalo de amostragem no índice do dataframe e agrupa as demais variáveis por sua média. 
+        Este método irá alterar a estrutura do dataframe.
+        interval: intervalo em segundos.
+    """
+    @classmethod
+    def normalizeInterval(self, df, interval, drop_null = True):
+        interval = f'{int(interval)}s'
+        df.loc[:,'date_created'] = pd.to_datetime(df['date_created'])
+        df.loc[:,'index'] = pd.DatetimeIndex(df['date_created'].values)
+        df = df.groupby(pd.Grouper(key='index',freq=interval, origin='2021-08-06', offset='12h15min', sort=True)).mean()
+        # df = df.resample()
+        if drop_null:
+            df = df.dropna()
+        return df
 
 
-# np.savetxt('dados/gps_esc_datas.csv', gps, fmt='%.6f', delimiter=',')
-# gps.to_csv('dados/gps_esc_datas.csv')
+
+
+if __name__ == "__main__": 
+
+    file_cam = 'logs_caminhao_18_08_21_filtered.csv'
+    file_esc = 'logs_escavadeira_18_08_21_filtered.csv'
+    file = 'logs_Caminhao_17_08_21_filtered.csv'
+    # cam = dataObject(file_cam)
+    esc = dataObject(file_esc)
+    cam_ant = dataObject(file)
+    fig1 = None
+
+    esc.df_filtered['timestamp'] = dataObject.convertToTimestamp(esc.df_filtered['date_created'])
+    # Normaliza intervalos em 10s
+    esc.df_filtered = dataObject.normalizeInterval(esc.df_filtered, interval = 10, drop_null=True)
+    cam_ant.df_filtered = dataObject.normalizeInterval(cam_ant.df_filtered, interval = 10, drop_null=True)
+    print(esc.df_filtered.head())
+    print(cam_ant.df_filtered.head())
+
+    # esc_gps_fil = esc.df_filtered.loc[:,['latitude','longitude']]
+    # esc_gps_fil_values = esc_gps_fil.values
+
+
+    # esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
+    # fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
+    # fig1.show()
+    # # Geracao Grafico
+    # esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
+    # cam_fil = cam_ant.df_filtered.loc[cam_ant.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
+    # fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
+    # fig1 = dataObject.plotDatas(fig1, cam_fil.values, is_line=False, label='caminhao')
+    # fig1.show()

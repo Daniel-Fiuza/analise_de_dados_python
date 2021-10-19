@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import sys
 import platform as pl
 from geopy.distance import great_circle
-from datetime import datetime
+import datetime 
 import time
 
 from traitlets.traitlets import Int
@@ -68,14 +68,19 @@ class dataObject():
 
         fig.update_layout(
             margin ={'l':0,'t':0,'b':0,'r':0},
+            #'center': {'lon': -38.71901, 'lat':  -3.94467},
             mapbox = {
-                'center': {'lon': -38.71901, 'lat':  -3.94467},
+                'center': {'lon': datas[:,1].mean(), 'lat':  datas[:,0].mean()},
                 'style': "stamen-terrain",
-                'center': {'lon': -38.71901, 'lat': -3.94467},
-                'zoom': 15})
+                'center': {'lon': datas[:,1].mean(), 'lat':  datas[:,0].mean()},
+                'zoom': 16})
         return fig
 
 
+    """
+        Convert data em timestamp Unix.
+        Exemplo: df_filtered['timestamp'] = dataObject.convertToTimestamp(df_filtered['date_created'])
+    """
     @classmethod
     def convertToTimestamp(cls, datetime_data):
         dates = pd.to_datetime(datetime_data)
@@ -110,42 +115,71 @@ class dataObject():
         interval = f'{int(interval)}s'
         df.loc[:,'date_created'] = pd.to_datetime(df['date_created'])
         df.loc[:,'index'] = pd.DatetimeIndex(df['date_created'].values)
-        df = df.groupby(pd.Grouper(key='index',freq=interval, origin='2021-08-06', offset='12h15min', sort=True)).mean()
+        # offset_time = datetime.timedelta(minutes = 7)
+        df = df.groupby(pd.Grouper(key='index',freq=interval, label='right', sort=True)).mean()
         # df = df.resample()
         if drop_null:
             df = df.dropna()
         return df
 
 
-
-
 if __name__ == "__main__": 
 
-    file_cam = 'logs_caminhao_18_08_21_filtered.csv'
     file_esc = 'logs_escavadeira_18_08_21_filtered.csv'
-    file = 'logs_Caminhao_17_08_21_filtered.csv'
-    # cam = dataObject(file_cam)
+    file_cam = 'logs_Caminhao_17_08_21_filtered.csv'
+
     esc = dataObject(file_esc)
-    cam_ant = dataObject(file)
+    cam_ant = dataObject(file_cam)
     fig1 = None
 
-    esc.df_filtered['timestamp'] = dataObject.convertToTimestamp(esc.df_filtered['date_created'])
-    # Normaliza intervalos em 10s
-    esc.df_filtered = dataObject.normalizeInterval(esc.df_filtered, interval = 10, drop_null=True)
-    cam_ant.df_filtered = dataObject.normalizeInterval(cam_ant.df_filtered, interval = 10, drop_null=True)
-    print(esc.df_filtered.head())
-    print(cam_ant.df_filtered.head())
+    # Distância em metros entre os dois veículos
+    DISTANCE = 5
+    # Intervalo em segundos da normalização
+    INTERVAL_TIME = 10
 
-    # esc_gps_fil = esc.df_filtered.loc[:,['latitude','longitude']]
-    # esc_gps_fil_values = esc_gps_fil.values
+    # Normaliza intervalos em INTERVAL_TIME e substitui valores NaN por -1
+    esc.df_filtered = dataObject.normalizeInterval(esc.df_filtered, interval = INTERVAL_TIME, drop_null=False).fillna(-1)
+    cam_ant.df_filtered = dataObject.normalizeInterval(cam_ant.df_filtered, interval = INTERVAL_TIME, drop_null=False).fillna(-1)
+
+    # Define Janela de tempo 
+    esc.df_ready = esc.df_filtered.loc['2021-08-06 12:15:00':'2021-08-17 07:44:00']
+    cam_ant.df_ready = cam_ant.df_filtered.loc['2021-08-06 12:15:00':'2021-08-17 07:44:00']
+
+    # Cria um novo dataframe incluindo dados de ambos os veículos
+    df_datas = esc.df_ready.copy()
+    df_datas['velocity_cam'] = cam_ant.df_ready['velocity']
+    df_datas['latitude_cam'] = cam_ant.df_ready['latitude']
+    df_datas['longitude_cam'] = cam_ant.df_ready['longitude']
+
+    # Filtra os dados de geolocalização válidos de ambos os veículos
+    df_datas_fil = df_datas.loc[(df_datas['latitude'] < -1) & (df_datas['latitude_cam'] < -1)]
+
+    # Calcula Intervalo entre dois pontos geográficos
+    esc_values = df_datas_fil.loc[:, ['latitude', 'longitude']].values
+    cam_values = df_datas_fil.loc[:, ['latitude_cam', 'longitude_cam']].values
+    distance = np.array([])
+
+    for i, esc_val in enumerate(esc_values):
+        try:
+            distance = np.append(distance, great_circle(esc_val, cam_values[i]).m)
+        except:
+            distance = np.append(distance, 1000)
 
 
-    # esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
-    # fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
-    # fig1.show()
+    df_datas_fil['distance'] = distance
+    print(df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE])
+    print('\nCAM_ANT:\n')
+    # print(cam_ant.df_filtered.loc['2021-08-06 12:53:00':'2021-08-06 13:13:20'].head())
+    cam_desc = cam_ant.df_filtered.loc['2021-08-06 12:53:00':'2021-08-06 13:13:20']
+    print(df_datas_fil.loc[df_datas_fil['weight'] > 0])
+    # print(df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE])
+    # sys.exit()
     # # Geracao Grafico
+    esc_fil = df_datas_fil.loc[df_datas_fil['weight'] > 0, ['latitude','longitude']]
+    # esc_fil = df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE, ['latitude','longitude']]
+    # cam_fil = df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE, ['latitude_cam','longitude_cam']]
     # esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
     # cam_fil = cam_ant.df_filtered.loc[cam_ant.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
-    # fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
+    fig1 = dataObject.plotDatas(fig1, esc_fil.values, is_line=False, label='escavadeira')
     # fig1 = dataObject.plotDatas(fig1, cam_fil.values, is_line=False, label='caminhao')
-    # fig1.show()
+    fig1.show()

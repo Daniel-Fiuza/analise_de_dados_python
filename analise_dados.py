@@ -135,7 +135,7 @@ if __name__ == "__main__":
     # Distância em metros entre os dois veículos
     DISTANCE = 5
     # Intervalo em segundos da normalização
-    INTERVAL_TIME = 10
+    INTERVAL_TIME = 60
 
     # Normaliza intervalos em INTERVAL_TIME e substitui valores NaN por -1
     esc.df_filtered = dataObject.normalizeInterval(esc.df_filtered, interval = INTERVAL_TIME, drop_null=False).fillna(-1)
@@ -169,14 +169,34 @@ if __name__ == "__main__":
     df_datas_fil['distance'] = distance
     print(df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE])
     print('\nCAM_ANT:\n')
-    # print(cam_ant.df_filtered.loc['2021-08-06 12:53:00':'2021-08-06 13:13:20'].head())
-    cam_desc = cam_ant.df_filtered.loc['2021-08-06 12:53:00':'2021-08-06 13:13:20']
-    print(df_datas_fil.loc[df_datas_fil['weight'] > 0])
+    # Periodo de descarregamento. Caminhao distante e velocidade baixa.
+    cam_desc = df_datas_fil.loc[
+        (df_datas_fil.index > '2021-08-06 12:53:00') & \
+        (df_datas_fil['latitude_cam'] < -1) & \
+        (df_datas_fil['longitude_cam'] < 2)
+    ] # percurso de descarregamento
+    print(cam_desc)
+    
+    # Calcula distancia entre a posição atual e a anterior
+    cood1 = cam_desc.loc[:,['latitude','longitude']].values
+    cood2 = cam_desc.loc[:,['latitude','longitude']].shift(1).fillna(-1).values
+    dist = np.array([])
+    for i, cood in enumerate(cood1):
+        dist = np.append(dist, great_circle(cood, cood2[i]).m)
+
+    cam_desc['dist_last'] = dist
+
+    # Agrupa regiões de pontos de proximidade
+    cam_desc = cam_desc.loc[(cam_desc['dist_last'] < 5) & (cam_desc.index < '2021-08-06 14:00:00') & (cam_desc.index > '2021-08-06 13:30:00') & (cam_desc['velocity_cam'] < 5)]
+    print(cam_desc)
+    fig1 = dataObject.plotDatas(fig1, cam_desc.loc[:, ['latitude', 'longitude']].values, is_line=False, label='caminhao')
     # print(df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE])
     # sys.exit()
     # # Geracao Grafico
-    esc_fil = df_datas_fil.loc[df_datas_fil['weight'] > 0, ['latitude','longitude']]
-    # esc_fil = df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE, ['latitude','longitude']]
+    # esc_fil = df_datas_fil.loc[df_datas_fil['weight'] > 0, ['latitude','longitude']]
+    esc_fil = df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE, ['latitude','longitude']]
+    print('\n ESC_FIL \n')
+    print(esc_fil)
     # cam_fil = df_datas_fil.loc[df_datas_fil['distance'] < DISTANCE, ['latitude_cam','longitude_cam']]
     # esc_fil = esc.df_filtered.loc[esc.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]
     # cam_fil = cam_ant.df_filtered.loc[cam_ant.df_filtered['velocity'].astype(float) < 1, ['latitude','longitude']]

@@ -243,6 +243,6 @@ def compare_files():
 
 
 if __name__ == "__main__": 
-    CSVfile = "dados/logs_caminhao_18_08_21.csv"
-    JSONfile = f"dados_json/{CSVfile[6:-4]}.json"
+    CSVfile = "dados_csv/logs_abdi_2.csv"
+    JSONfile = f"dados_json/{CSVfile[10:-4]}.json"
     convertCsvToJson(CSVfile,JSONfile)

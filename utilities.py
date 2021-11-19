@@ -12,7 +12,7 @@ def convertFromPathToCsv(dir_of_files):
     count_success = 0; count_files = 0
     pathList = Path(dir_of_files).glob('*.txt')
     # CSVfile = f"dados\{dir_of_files}.csv"
-    CSVfile = f"dados/{dir_of_files.split('/')[-1]}.csv"
+    CSVfile = f"dados_csv/{dir_of_files.split('/')[-1]}.csv"
     if os.path.exists(CSVfile):
             os.remove(CSVfile) 
 
@@ -245,4 +245,6 @@ def compare_files():
 if __name__ == "__main__": 
     CSVfile = "dados_csv/logs_abdi_2.csv"
     JSONfile = f"dados_json/{CSVfile[10:-4]}.json"
-    convertCsvToJson(CSVfile,JSONfile)
+    PathFiles = "/home/usuario/Documentos/Docs/DadosColetadosTucunduba/escavadeira/logs_escavadeira_24_09"
+    # convertCsvToJson(CSVfile,JSONfile)
+    convertFromPathToCsv(PathFiles)

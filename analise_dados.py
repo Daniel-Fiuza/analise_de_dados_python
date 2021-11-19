@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     # file_esc = 'logs_escavadeira_18_08_21_filtered.csv'
     # file_cam = 'logs_Caminhao_17_08_21_filtered.csv'
-    file_esc = 'logs_escavadeira_filtered.csv'
+    file_esc = 'logs_escavadeira_24_09.csv'
     file_cam = 'logs_caminhao_filtered.csv'
     file_merged = 'logs_abdi_2.csv'
 
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     # Intervalo em segundos da normalização
     INTERVAL_TIME = 10
 
+    # print(esc.df_filtered.loc[esc.df_filtered['status'] == "Carregando"])
+    # sys.exit()
     # Substitui valores do combustível inválidos
     cam_ant.df_filtered['fuel'] = cam_ant.df_filtered.apply(lambda x: generateRandom(x['fuel']), axis=1)
     
